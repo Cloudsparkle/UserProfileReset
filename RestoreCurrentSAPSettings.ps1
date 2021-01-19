@@ -1,76 +1,102 @@
-﻿Add-PSSnapin Citrix*
+﻿#requires -modules ActiveDirectory
+#
 $CTXDDC = "nitcitddc1vp"
+#Initialize script variables
+
+#Try loading Citrix CVAD Powershell modules, exit when failed
+if ((Get-PSSnapin "Citrix.Broker.Admin.*" -EA silentlycontinue) -eq $null)
+  {
+	try {Add-PSSnapin Citrix* -ErrorAction Stop }
+	catch {Write-error "Error loading Citrix CVAD Powershell snapin"; Return }
+  }
+
+#Initialize
+$CurrentSAPRestoreGroup = "EMEA_Current-RestoreSAPSettings"
+$CurrentSAPRestoreGroupDone = "EMEA_Current-RestoreSAPSettingsDone"
+$CurrentProfileShare = "\\nittoeurope.com\NE\Profiles\"
+$CurrentResetLogPath = $CurrentProfileShare + "\0. Resetlog\"
+$SAPNWBCXMLPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\*.xml"
+$SAPNWBCSettingsPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\"
+$SAPBCFavorites = "SAPBCFavorites.xml"
+$SAPNWBCFavorites = "NWBCFavorites.xml"
 
 while ($true)
 {
-Write-host "Cleaning up first..."
-[System.GC]::Collect()
-Sleep 15
+#Write-host "Cleaning up first..."
+#[System.GC]::Collect()
+#Sleep 15
 
-$NWBCUsers = Get-ADGroupMember -Identity FUJ_NE_CTX_MIGRATE-SAP-SETTINGS
-foreach ($NWBCUser in $NWBCUsers)
+$SAPUsers = Get-ADGroupMember -Identity $CurrentSAPRestoreGroup
+foreach ($SAPUser in $SAPUsers)
 {
-Write-Host "Processing " $NWBCUser.name -ForegroundColor Yellow
+Write-Host "Processing " $SAPUser.name -ForegroundColor Yellow
 
 $Currentsession = ""
-$Currentsession = Get-BrokerSession -AdminAddress $ctxddc -UserSID $NWBCUser.SID
+$Currentsession = Get-XASession | select Accountname | where {$_.Accountname -like ("*"+$SAPUser.SamAccountName)}
 
 if ($Currentsession -ne $null)
     {
-    write-host "User" $NWBCUser.name "has a current session. Moving on." -ForegroundColor Red
+    write-host "User" $SAPUser.name "has a current session. Moving on." -ForegroundColor Red
     continue
     }
+$RestoreLogID = Get-ChildItem $CurrentResetLogPath | select name | where {$_.name -like ($NWBCUser.SamAccountName+"*")}
 
-#$ADUser = Get-ADUser $NWBCUser | select samaccountname
+$Backuppath = $CurrentProfileShare + $RestoreLogID.Name + $SAPNWBCXMLPath
+$CurrentPath = $CurrentProfileShare + $SAPUser.SamAccountName + ".nittoeurope" + $SAPNWBCSettingsPath
+$CurrentXMLFile1 = $Currentpath + $SAPBCFavorites
+$CurrentXMLFile2 = $Currentpath + $SAPNWBCFavorites
 
-$Legacypath = "\\nittoeurope.com\NE\Profiles\" + $NWBCUser.samaccountname + "\UPM_Profile\AppData\Roaming\SAP\NWBC\*.xml"
-$FJPath = "\\nitctxfil1vp.nittoeurope.com\profiles$\"+ $NWBCUser.samaccountname + ".nittoeurope\UPM_Profile\AppData\Roaming\SAP\NWBC"
-$FJXMLPath = "\\nitctxfil1vp.nittoeurope.com\profiles$\"+ $NWBCUser.samaccountname + ".nittoeurope\UPM_Profile\AppData\Roaming\SAP\NWBC\SAPBCFavorites.xml"
-$FJXMLPath2 = "\\nitctxfil1vp.nittoeurope.com\profiles$\"+ $NWBCUser.samaccountname + ".nittoeurope\UPM_Profile\AppData\Roaming\SAP\NWBC\NWBCFavorites.xml"
+$BackupExists =Test-Path -Path $Backuppath
+$CurrentExists =Test-Path -Path $CurrentPath
 
-$LegacyExists =Test-Path -Path $Legacypath
-$FJExists =Test-Path -Path $FJPath
+#Write-Host $Backuppath, $BackupExists
+Write-Host $CurrentPath, $CurrentExists
 
-#Write-Host $Legacypath, $LegacyExists, $FJExists
-
-if ($LegacyExists -eq $true)
+if ($BackupExists -eq $true)
     {
-    Write-host "Legacy settings exist..."
+    Write-host "Backup settings exist..."
 
-    if ($FJExists -eq $true)
+    if ($CurrentExists -eq $true)
         {
-        Write-host "User has accessed the FJ application already."
+        Write-host "User has accessed the Current application already."
         Write-Host "Copying files..."
-        Copy-Item $Legacypath -Destination $FJPath
+        Copy-Item $Backuppath -Destination $CurrentPath
         Write-Host "Fixing permissions..."
-        icacls $FJXMLPath /setowner $NWBCUser.samaccountname
-        icacls $FJXMLPath /inheritancelevel:e
-        $XML2exists = Test-Path -Path $FJXMLPath2
+        $XML1exists = Test-Path -Path $CurrentXMLFile1
+        if ($XML1exists -eq $true)
+            {
+            icacls $CurrentXMLFile1 /setowner $SAPUser.samaccountname
+            icacls $CurrentXMLFile1 /inheritancelevel:e
+            }
+        $XML2exists = Test-Path -Path $CurrentXMLFile2
         if ($XML2exists -eq $true)
             {
-            icacls $FJXMLPath2 /setowner $NWBCUser.samaccountname
-            icacls $FJXMLPath2 /inheritancelevel:e
+            icacls $CurrentXMLFile2 /setowner $SAPUser.samaccountname
+            icacls $CurrentXMLFile2 /inheritancelevel:e
             }
         
-        Write-Host "Removing user from AD Group" -ForegroundColor Green
-        Remove-ADGroupMember -Identity FUJ_NE_CTX_MIGRATE-SAP-SETTINGS -Members $NWBCUser.samaccountname -Confirm:$False
+        Write-Host "Restore Complete Removing user from AD Group" -ForegroundColor Green
+        Remove-ADGroupMember -Identity $CurrentSAPRestoreGroup -Members $SAPUser.samaccountname -Confirm:$False
+         Add-ADGroupMember -Identity $CurrentSAPRestoreGroupDone -Members $SAPUser.samaccountname
         }
     Else
         {
-        write-host "User has not launched the FJ application yet. Moving on." -ForegroundColor red
+        write-host "User has not launched the Current application yet. Moving on." -ForegroundColor red
         }
     }
 Else
     {
-    write-host "User has not launched the Legacy application. Nothing to migrate." -ForegroundColor red
-    Write-Host "Removing user from AD Group" -ForegroundColor Green
-    Remove-ADGroupMember -Identity FUJ_NE_CTX_MIGRATE-SAP-SETTINGS -Members $NWBCUser.samaccountname -Confirm:$False
+    write-host "Backup location does not contain application data. Nothing to restore." -ForegroundColor red
+#    Write-Host "Removing user from AD Group" -ForegroundColor Green
+#    Remove-ADGroupMember -Identity $CurrentSAPRestoreGroup -Members $SAPUser.samaccountname -Confirm:$False
+
+#TO DO: CleanRestoreFileLog
     }
 }
 
 Write-Host "Waiting for next run..."
-clear-variable -name NWBCUsers
-[System.GC]::GetTotalMemory($true) | out-null
-Sleep 15
+clear-variable -name SAPUsers
+#[System.GC]::GetTotalMemory($true) | out-null
+#Sleep 15
 
 }

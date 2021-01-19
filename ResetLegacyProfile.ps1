@@ -1,9 +1,12 @@
 ﻿#requires -modules ActiveDirectory
 
 #Variables to be customized
-$LegacyADGroup = "EMEA_ResetLegacyCTXProfile"
+$LegacyADGroup = "EMEA_Legacy-ResetCTXProfile"
 $LegacySAPRestoreGroup = "EMEA_Legacy-RestoreSAPSettings"
-$LegacyProfileShare = "\\nittoeurope.com\NE\Profiles"
+
+$LegacyProfileShare = "\\nittoeurope.com\NE\Profiles\"
+$LegacyResetLogPath = $LegacyProfileShare + "0. Resetlog\"
+$SAPNWBCSettingsPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\"
 
 $XenAppZDC = "NESRVCTX100" #Choose any Zone Data Collector
 
@@ -19,45 +22,63 @@ if ((Get-PSSnapin "Citrix.XenApp.Commands" -EA silentlycontinue) -eq $null)
 
 while ($true)
 {
-Write-host "Cleaning up first..."
-[System.GC]::Collect()
-#Sleep 15
+    #Getting today's suffix
+    $suffix = "." + (get-date).ToString('yyyyMMdd')
 
-#Getting today's suffix
-$suffix = "." + (get-date).ToString('yyyyMd')
-
-$LegacyResetUsers = Get-ADGroupMember -Identity $LegacyADGroup
-foreach ($LegacyResetUser in $LegacyResetUsers)
-{
-Write-Host "Processing " $LegacyResetUser.name -ForegroundColor Yellow
-$Legacysession = ""
-$Legacysession = Get-XASession | select Accountname | where {$_.Accountname -like ("*"+$LegacyResetUser.SamAccountName)}
-
-if ($Legacysession -ne $null)
+    $LegacyResetUsers = Get-ADGroupMember -Identity $LegacyADGroup
+    foreach ($LegacyResetUser in $LegacyResetUsers)
     {
-    write-host "User" $LegacyResetUser.name "has a current session. Moving on." -ForegroundColor Red
-    continue
+
+        #Initialize variables per user
+        $Legacysession = ""
+        $RestoreLogID = ""
+
+        Write-Host "Processing " $LegacyResetUser.name -ForegroundColor Yellow
+                
+        $RestoreLogID = Get-ChildItem $LegacyResetLogPath | select name | where {$_.name -like ($LegacyResetUser.SamAccountName+"*")}
+        if ($RestoreLogID -ne $null)
+        {
+            Write-host "Incomplete legacy rofile reset detected. Check " $LegacyResetLogPath -ForegroundColor Red
+            Continue
+        }
+
+        $Legacysession = Get-XASession | select Accountname | where {$_.Accountname -like ("*"+$LegacyResetUser.SamAccountName)}
+
+        if ($Legacysession -ne $null)
+        {
+            write-host "User" $LegacyResetUser.name "has a current session. Moving on." -ForegroundColor Red
+            continue
+        }
+
+        $LegacyProfilePath = $LegacyProfileShare + $LegacyResetUser.samaccountname + "\"
+        $LegacySAPPath = $LegacyProfilePath + $SAPNWBCSettingsPath
+        $LegacyProfileResetLog = $LegacyProfileShare + "0. ResetLog\"+($LegacyResetUser.SamAccountName + $suffix)
+
+        write-host "Resetting Legacy profile for user" $LegacyResetUser.name -ForegroundColor Green
+        rename-item $LegacyProfilePath ($LegacyProfilePath+$suffix)
+
+        write-host "Logging User Profile Reset" -ForegroundColor Green
+        new-item $LegacyProfileResetLog -ItemType file
+
+        $LegacySAPExist = Test-Path -Path $LegacySAPPath
+        if ($LegacySAPExist)
+        {
+            Write-Host "Legacy SAP Settings detected. Adding user to Legacy SAP Restore AD Group" -ForegroundColor Yellow
+            Add-ADGroupMember -Identity $LegacySAPRestoreGroup -Members $legacyresetuser.samaccountname    
+        }
+
+        Write-Host "Profile Reset complete. Removing user from Legacy Profile Reset AD Group" -ForegroundColor Green
+        Remove-ADGroupMember -Identity $LegacyADGroup -Members $legacyresetuser.samaccountname -Confirm:$False
+
     }
-$LegacyProfilePath = $LegacyProfileShare + "\" + $LegacyResetUsers.samaccountname
-$LegacyProfileResetLog = $LegacyProfileShare + "\ResetLog\"+($LegacyResetUser.SamAccountName + $suffix)
-write-host "Resetting Legacy profile for user" $LegacyResetUser.name -ForegroundColor Green
-rename-item $LegacyProfilePath ($LegacyProfilePath+$suffix)
-
-write-host "Logging User Profile Reset" -ForegroundColor Green
-new-item $LegacyProfileResetLog -ItemType file
-
-Write-Host "Removing user from Legacy Profile Reset AD Group" -ForegroundColor Green
-Remove-ADGroupMember -Identity EMEA_ResetLegacyCTXProfile -Members $legacyresetuser.samaccountname -Confirm:$False
-
-Write-Host "Adding user to Legacy SAP Restore AD Group" -ForegroundColor Green
-Add-ADGroupMember -Identity $LegacySAPRestoreGroup -Members $legacyresetuser.samaccountname
-
-}
 
 Write-Host "Waiting for next run..."
 #To Do: check for empty
 clear-variable -name LegacyResetUsers
-[System.GC]::GetTotalMemory($true) | out-null
+"Memory used before collection: $([System.GC]::GetTotalMemory($false))"
+[System.GC]::Collect()
+Sleep 15
+"Memory used after full collection: $([System.GC]::GetTotalMemory($true))"
 Sleep 15
 
 }

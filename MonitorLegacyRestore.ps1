@@ -1,45 +1,22 @@
 ﻿#requires -modules ActiveDirectory
 #
-#Try loading Citrix XenApp 6.5 Powershell modules, exit when failed
-if ((Get-PSSnapin "Citrix.XenApp.Commands" -EA silentlycontinue) -eq $null)
-  {
-	try {Add-PSSnapin Citrix* -ErrorAction Stop }
-	catch {Write-error "Error loading XenApp Powershell snapin"; Return }
-  }
 
 #Initialize
-$LegacySAPRestoreGroup = "EMEA_Legacy-RestoreSAPSettings"
 $LegacySAPRestoreGroupDone = "EMEA_Legacy-RestoreSAPSettingsDone"
 
 $LegacyProfileShare = "\\nittoeurope.com\NE\Profiles\"
 $LegacyResetLogPath = $LegacyProfileShare + "\0. Resetlog\"
-$SAPNWBCXMLPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\*.xml"
-$SAPNWBCSettingsPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\"
-
-$SAPBCFavorites = "SAPBCFavorites.xml"
-$SAPNWBCFavorites = "NWBCFavorites.xml"
 
 while ($true)
 {
-$SAPUsers = Get-ADGroupMember -Identity $LegacySAPRestoreGroup
-foreach ($SAPUser in $SAPUsers)
-{
-Write-Host "Processing " $SAPUser.name -ForegroundColor Yellow
-
-$Legacysession = ""
-$Legacysession = Get-XASession | select Accountname | where {$_.Accountname -like ("*"+$SAPUser.SamAccountName)}
-
-if ($Legacysession -ne $null)
+    $SAPRestoredUsers = Get-ADGroupMember -Identity $LegacySAPRestoreGroupDone
+    foreach ($SAPRestoredUser in $SAPRestoredUsers)
     {
-    write-host "User" $SAPUser.name "has a current session. Moving on." -ForegroundColor Red
-    continue
-    }
-$RestoreLogID = Get-ChildItem $LegacyResetLogPath | select name | where {$_.name -like ($SAPUser.SamAccountName+"*")}
+        Write-Host "Processing " $SAPRestoredUser.name -ForegroundColor Yellow
 
-$Backuppath = $LegacyProfileShare + $RestoreLogID.Name + $SAPNWBCXMLPath
-$LegacyPath = $LegacyProfileShare + $SAPUser.SamAccountName + $SAPNWBCSettingsPath
-$LegacyXMLFile1 = $Legacypath + $SAPBCFavorites
-$LegacyXMLFile2 = $Legacypath + $SAPNWBCFavorites
+        $RestoreLogID = Get-ChildItem $LegacyResetLogPath | select name | where {$_.name -like ($SAPRestoredUser.SamAccountName+"*")}
+
+        Remove-Item
 
 $BackupExists =Test-Path -Path $Backuppath
 $LegacyExists =Test-Path -Path $LegacyPath
