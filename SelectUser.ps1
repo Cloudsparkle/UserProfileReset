@@ -22,12 +22,10 @@
 
 #Initialize variables
 $SelectedDomain = ""
-$SourceGroup = ""
-$DestinationGroup = ""
 $LegacyProfileShare = "\\nittoeurope.com\NE\Profiles"
 $CurrentProfileShare = "\\nitctxfil1vp.nittoeurope.com\profiles$"
-$LegacyADGroup = "EMEA_ResetLegacyCTXProfile"
-$CurrentADGroup = "EMEA_ResetCurrentCTXProfile"
+$LegacyADGroup = "EMEA_Legacy-ResetCTXProfile"
+$CurrentADGroup = "EMEA_Current-ResetCTXProfile"
 
 Add-Type -AssemblyName PresentationFramework
 
