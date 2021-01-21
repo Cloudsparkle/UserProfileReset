@@ -16,7 +16,7 @@ while ($true)
 
         $RestoreLogID = Get-ChildItem $LegacyResetLogPath | select name | where {$_.name -like ($SAPRestoredUser.SamAccountName+"*")}
 
-        Remove-Item
+        
 
 $BackupExists =Test-Path -Path $Backuppath
 $LegacyExists =Test-Path -Path $LegacyPath
