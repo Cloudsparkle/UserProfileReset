@@ -76,8 +76,7 @@ while ($true)
     if ($LegacyProfileExist)
     {
         write-host "Resetting Legacy profile for user" $LegacyResetUser.name -ForegroundColor Green
-        rename-item $LegacyProfilePath ($LegacyProfilePath+$suffix)
-
+        
         write-host "Logging User Profile Reset" -ForegroundColor Green
         new-item $LegacyProfileResetLog -ItemType file
 
@@ -88,6 +87,7 @@ while ($true)
             Add-ADGroupMember -Identity $LegacySAPRestoreGroup -Members $legacyresetuser.samaccountname
             Add-ADGroupMember -Identity $LegacyResetRunningGroup -Members $legacyresetuser.samaccountname
         }
+        rename-item $LegacyProfilePath ($LegacyProfilePath+$suffix)
         Write-Host "Profile Reset complete. Removing user from Legacy Profile Reset AD Group" -ForegroundColor Green
     }
     else
@@ -100,12 +100,10 @@ while ($true)
   }
 
   Write-Host "Waiting for next run..."
-  
-  clear-variable -name LegacyResetUsers
+    
   "Memory used before collection: $([System.GC]::GetTotalMemory($false))"
   [System.GC]::Collect()
   Sleep 15
   "Memory used after full collection: $([System.GC]::GetTotalMemory($true))"
   Sleep 15
-
 }
