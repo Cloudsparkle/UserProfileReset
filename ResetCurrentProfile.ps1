@@ -26,7 +26,7 @@ $CurrentProfileShare = "\\nitctxfil1vp.nittoeurope.com\profiles$\"
 $CurrentResetLogPath = $CurrentProfileShare + "0. Resetlog\"
 
 $SAPNWBCSettingsPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\"
-$QVSettingsPath = "\UPM_Profile\AppData\Roaming\QlikTech\QlikView\"
+$QVSettingsPath = "\UPM_Profile\AppData\Roaming\Microsoft\AppV\Client\VFS\AC588FED-CFBD-406F-ABF2-03FB16563EF2\AppData\QlikTech\QlikView\"
 
 #Set DDC to connect to
 $CTXDDC = "nitcitddc1vp"
@@ -44,10 +44,10 @@ while ($true)
 {
   #Getting today's suffix
   $suffix = "." + (get-date).ToString('yyyyMMdd')
-
+  
   $CurrentResetUsers = Get-ADGroupMember -Identity $CurrentADGroup
 
-  foreach ($CurrentResetUser in $CurentResetUsers)
+  foreach ($CurrentResetUser in $CurrentResetUsers)
   {
     #Initialize variable
     $Currentsession = ""
@@ -71,9 +71,9 @@ while ($true)
     }
 
     $CurrentProfilePath = $CurrentProfileShare + $CurrentResetUser.samaccountname + ".nittoeurope"
-    $CurrentSAPPath = $CurrentProfilePath + "\" + $SAPNWBCSettingsPath
+    $CurrentSAPPath = $CurrentProfilePath + $SAPNWBCSettingsPath
     $CurrentQVPath = $CurrentProfilePath + $QVSettingsPath
-    $CurrentProfileResetLog = $CurrentProfileShare + "0. ResetLog\"+($CurrentResetUser.SamAccountName + $suffix)
+    $CurrentProfileResetLog = $CurrentProfileShare + "0. ResetLog\"+($CurrentResetUser.SamAccountName +".nittoeurope"+ $suffix)
     $Restoreneeded = $False
 
     $CurrentProfileExist = test-path -Path $currentprofilepath

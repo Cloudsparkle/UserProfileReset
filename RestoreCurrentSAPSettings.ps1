@@ -30,7 +30,7 @@ if ((Get-PSSnapin "Citrix.Broker.Admin.*" -EA silentlycontinue) -eq $null)
 $CurrentSAPRestoreGroup = "EMEA_Current-RestoreSAPSettings"
 $CurrentSAPRestoreGroupDone = "EMEA_Current-RestoreSAPSettingsDone"
 
-$CurrentProfileShare = "\\nittoeurope.com\NE\Profiles\"
+$CurrentProfileShare = "\\nitctxfil1vp.nittoeurope.com\profiles$\"
 $CurrentResetLogPath = $CurrentProfileShare + "0. Resetlog\"
 $SAPNWBCXMLPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\*.xml"
 $SAPNWBCSettingsPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\"

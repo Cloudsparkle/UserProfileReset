@@ -30,11 +30,11 @@ if ((Get-PSSnapin "Citrix.Broker.Admin.*" -EA silentlycontinue) -eq $null)
 $CurrentQVRestoreGroup = "EMEA_Current-RestoreQVSettings"
 $CurrentQVRestoreGroupDone = "EMEA_Current-RestoreQVSettingsDone"
 
-$CurrentProfileShare = "\\nittoeurope.com\NE\Profiles\"
+$CurrentProfileShare = "\\nitctxfil1vp.nittoeurope.com\profiles$\"
 $CurrentResetLogPath = $CurrentProfileShare + "0. Resetlog\"
 $QVINIPath = "\UPM_Profile\AppData\Roaming\QlikTech\QlikView\settings.ini"
 $QVINI = "settings.ini"
-$QVSettingsPath = "\UPM_Profile\AppData\Roaming\QlikTech\QlikView\"
+$QVSettingsPath = "\UPM_Profile\AppData\Roaming\Microsoft\AppV\Client\VFS\AC588FED-CFBD-406F-ABF2-03FB16563EF2\AppData\QlikTech\QlikView\"
 
 while ($true)
 {
