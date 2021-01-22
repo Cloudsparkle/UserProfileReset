@@ -55,7 +55,7 @@ while ($true)
     $RestoreLogID = Get-ChildItem $LegacyResetLogPath | select name | where {$_.name -like ($LegacyResetUser.SamAccountName+"*")}
     if ($RestoreLogID -ne $null)
     {
-      Write-host "Incomplete legacy rofile reset detected. Check " $LegacyResetLogPath -ForegroundColor Red
+      Write-host "Incomplete legacy rofile reset detected. Check" $LegacyResetLogPath -ForegroundColor Red
       Continue
     }
 

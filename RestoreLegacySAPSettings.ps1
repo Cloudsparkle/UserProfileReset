@@ -29,7 +29,7 @@ $LegacySAPRestoreGroup = "EMEA_Legacy-RestoreSAPSettings"
 $LegacySAPRestoreGroupDone = "EMEA_Legacy-RestoreSAPSettingsDone"
 
 $LegacyProfileShare = "\\nittoeurope.com\NE\Profiles\"
-$LegacyResetLogPath = $LegacyProfileShare + "\0. Resetlog\"
+$LegacyResetLogPath = $LegacyProfileShare + "0. Resetlog\"
 $SAPNWBCXMLPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\*.xml"
 $SAPNWBCSettingsPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\"
 
