@@ -13,8 +13,9 @@ if ((Get-PSSnapin "Citrix.Broker.Admin.*" -EA silentlycontinue) -eq $null)
 #Initialize
 $CurrentSAPRestoreGroup = "EMEA_Current-RestoreSAPSettings"
 $CurrentSAPRestoreGroupDone = "EMEA_Current-RestoreSAPSettingsDone"
+
 $CurrentProfileShare = "\\nittoeurope.com\NE\Profiles\"
-$CurrentResetLogPath = $CurrentProfileShare + "\0. Resetlog\"
+$CurrentResetLogPath = $CurrentProfileShare + "0. Resetlog\"
 $SAPNWBCXMLPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\*.xml"
 $SAPNWBCSettingsPath = "\UPM_Profile\AppData\Roaming\SAP\NWBC\"
 $SAPBCFavorites = "SAPBCFavorites.xml"
@@ -22,9 +23,7 @@ $SAPNWBCFavorites = "NWBCFavorites.xml"
 
 while ($true)
 {
-#Write-host "Cleaning up first..."
-#[System.GC]::Collect()
-#Sleep 15
+
 
 $SAPUsers = Get-ADGroupMember -Identity $CurrentSAPRestoreGroup
 foreach ($SAPUser in $SAPUsers)
@@ -39,7 +38,7 @@ if ($Currentsession -ne $null)
     write-host "User" $SAPUser.name "has a current session. Moving on." -ForegroundColor Red
     continue
     }
-$RestoreLogID = Get-ChildItem $CurrentResetLogPath | select name | where {$_.name -like ($NWBCUser.SamAccountName+"*")}
+$RestoreLogID = Get-ChildItem $CurrentResetLogPath | select name | where {$_.name -like ($SAPUser.SamAccountName+"*")}
 
 $Backuppath = $CurrentProfileShare + $RestoreLogID.Name + $SAPNWBCXMLPath
 $CurrentPath = $CurrentProfileShare + $SAPUser.SamAccountName + ".nittoeurope" + $SAPNWBCSettingsPath
@@ -48,9 +47,6 @@ $CurrentXMLFile2 = $Currentpath + $SAPNWBCFavorites
 
 $BackupExists =Test-Path -Path $Backuppath
 $CurrentExists =Test-Path -Path $CurrentPath
-
-#Write-Host $Backuppath, $BackupExists
-Write-Host $CurrentPath, $CurrentExists
 
 if ($BackupExists -eq $true)
     {
@@ -77,26 +73,22 @@ if ($BackupExists -eq $true)
         
         Write-Host "Restore Complete Removing user from AD Group" -ForegroundColor Green
         Remove-ADGroupMember -Identity $CurrentSAPRestoreGroup -Members $SAPUser.samaccountname -Confirm:$False
-         Add-ADGroupMember -Identity $CurrentSAPRestoreGroupDone -Members $SAPUser.samaccountname
+        Add-ADGroupMember -Identity $CurrentSAPRestoreGroupDone -Members $SAPUser.samaccountname
         }
     Else
         {
         write-host "User has not launched the Current application yet. Moving on." -ForegroundColor red
         }
     }
-Else
-    {
-    write-host "Backup location does not contain application data. Nothing to restore." -ForegroundColor red
-#    Write-Host "Removing user from AD Group" -ForegroundColor Green
-#    Remove-ADGroupMember -Identity $CurrentSAPRestoreGroup -Members $SAPUser.samaccountname -Confirm:$False
-
-#TO DO: CleanRestoreFileLog
-    }
+    
 }
 
 Write-Host "Waiting for next run..."
 clear-variable -name SAPUsers
-#[System.GC]::GetTotalMemory($true) | out-null
-#Sleep 15
+  "Memory used before collection: $([System.GC]::GetTotalMemory($false))"
+  [System.GC]::Collect()
+  Sleep 15
+  "Memory used after full collection: $([System.GC]::GetTotalMemory($true))"
+  Sleep 15
 
 }
