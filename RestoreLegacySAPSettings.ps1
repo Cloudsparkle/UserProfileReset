@@ -72,13 +72,13 @@ while ($true)
         Copy-Item $Backuppath -Destination $LegacyPath
         Write-Host "Fixing permissions..."
         $XML1exists = Test-Path -Path $LegacyXMLFile1
-        if ($XML1exists -eq $true)
+        if ($XML1exists)
         {
           icacls $LegacyXMLFile1 /setowner $SAPUser.samaccountname
           icacls $LegacyXMLFile1 /inheritancelevel:e
         }
         $XML2exists = Test-Path -Path $LegacyXMLFile2
-        if ($XML2exists -eq $true)
+        if ($XML2exists)
         {
           icacls $LegacyXMLFile2 /setowner $SAPUser.samaccountname
           icacls $LegacyXMLFile2 /inheritancelevel:e
