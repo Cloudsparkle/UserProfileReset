@@ -19,10 +19,10 @@
 
 #Try loading Citrix XenApp 6.5 Powershell modules, exit when failed
 if ((Get-PSSnapin "Citrix.XenApp.Commands" -EA silentlycontinue) -eq $null)
-  {
-	try {Add-PSSnapin Citrix* -ErrorAction Stop }
-	catch {Write-error "Error loading XenApp Powershell snapin"; Return }
-  }
+{
+  try {Add-PSSnapin Citrix* -ErrorAction Stop }
+  catch {Write-error "Error loading XenApp Powershell snapin"; Return }
+}
 
 #Initialize
 $LegacySAPRestoreGroup = "EMEA_Legacy-RestoreSAPSettings"
