@@ -16,7 +16,7 @@
 .EXAMPLE
   None
 #>
-#
+
 #Try loading Citrix XenApp 6.5 Powershell modules, exit when failed
 if ((Get-PSSnapin "Citrix.XenApp.Commands" -EA silentlycontinue) -eq $null)
   {
