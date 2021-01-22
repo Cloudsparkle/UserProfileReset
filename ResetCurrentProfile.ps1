@@ -20,6 +20,7 @@
 #Variables to be customized
 $CurrentADGroup = "EMEA_Current-ResetCTXProfile"
 $CurrentSAPRestoreGroup = "EMEA_Current-RestoreSAPSettings"
+$CurrentResetRunningGroup = "EMEA_Current-ResetCTXProfileRunning"
 
 $CurrentProfileShare = "\\nitctxfil1vp.nittoeurope.com\profiles$\"
 $CurrentResetLogPath = $CurrentProfileShare + "0. Resetlog\"
@@ -69,40 +70,55 @@ while ($true)
       continue
     }
 
-    $CurrentProfilePath = $CurrentProfileShare + $CurrentResetUser.samaccountname + ".nittoeurope" + "\"
-    $CurrentSAPPath = $CurrentProfilePath + $SAPNWBCSettingsPath
+    $CurrentProfilePath = $CurrentProfileShare + $CurrentResetUser.samaccountname + ".nittoeurope"
+    $CurrentSAPPath = $CurrentProfilePath + "\" + $SAPNWBCSettingsPath
     $CurrentQVPath = $CurrentProfilePath + $QVSettingsPath
-    $CurrentProfileResetLog = $CurrentProfileShare + "\0. ResetLog\"+($CurrentResetUser.SamAccountName + $suffix)
+    $CurrentProfileResetLog = $CurrentProfileShare + "0. ResetLog\"+($CurrentResetUser.SamAccountName + $suffix)
+    $Restoreneeded = $False
 
-    write-host "Resetting Current profile for user" $CurrentResetUser.name -ForegroundColor Green
-    rename-item $CurrentProfilePath ($CurrentProfilePath+$suffix)
-
-    write-host "Logging User Profile Reset" -ForegroundColor Green
-    new-item $CurrentProfileResetLog -ItemType file
-
-    $CurrentSAPExist = Test-Path -Path $CurrentSAPPath
-    if ($CurrentSAPExist)
+    $CurrentProfileExist = test-path -Path $currentprofilepath
+    if ($CurrentProfileExist)
     {
-      Write-Host "Current SAP settings detected. Adding user to Current SAP Restore AD Group" -ForegroundColor Green
-      Add-ADGroupMember -Identity $CurrentSAPRestoreGroup -Members $Currentresetuser.samaccountname
+        write-host "Resetting Current profile for user" $CurrentResetUser.name -ForegroundColor Green
+        
+        write-host "Logging User Profile Reset" -ForegroundColor Green
+        new-item $CurrentProfileResetLog -ItemType file
+
+        $CurrentSAPExist = Test-Path -Path $CurrentSAPPath
+        if ($CurrentSAPExist)
+        {
+            Write-Host "Current SAP settings detected. Adding user to Current SAP Restore AD Group" -ForegroundColor Green
+            Add-ADGroupMember -Identity $CurrentSAPRestoreGroup -Members $Currentresetuser.samaccountname
+            $RestoreNeeded = $true
+        }
+
+        $CurrentQVExist = Test-Path -Path $CurrentQVPath
+        if ($CurrentQVExist)
+        {
+            Write-Host "Current QlikView settings detected. Adding user to Current Qlikview Restore AD Group" -ForegroundColor Green
+            Add-ADGroupMember -Identity $CurrentQVRestoreGroup -Members $Currentresetuser.samaccountname
+            $RestoreNeeded = $true
+        }
+
+        if ($RestoreNeeded)
+        {
+            Add-ADGroupMember -Identity $CurrentResetRunningGroup -Members $Currentresetuser.samaccountname
+        }
+
+        rename-item $CurrentProfilePath ($CurrentProfilePath+$suffix)
+        Write-Host "Profile reset complete. Removing user from Current Profile Reset AD Group" -ForegroundColor Green
+        
+
+    }
+else
+    {
+        write-host "Current profile for user does not exist. Reset cancelled" -ForegroundColor Red
     }
 
-    $CurrentQVExist = Test-Path -Path $CurrentQVPath
-    if ($CurrentQVExist)
-    {
-      Write-Host "Current QlikView settings detected. Adding user to Current Qlikview Restore AD Group" -ForegroundColor Green
-      Add-ADGroupMember -Identity $CurrentQVRestoreGroup -Members $Currentresetuser.samaccountname
-    }
-
-    Write-Host "Profile reset complete. Removing user from Current Profile Reset AD Group" -ForegroundColor Green
     Remove-ADGroupMember -Identity $CurrentADGroup -Members $Currentresetuser.samaccountname -Confirm:$False
-
-  }
-
+    }
   Write-Host "Waiting for next run..."
-  #To Do: check for empty
-
-  clear-variable -name CurrentResetUsers
+  
   "Memory used before collection: $([System.GC]::GetTotalMemory($false))"
   [System.GC]::Collect()
   Sleep 15
