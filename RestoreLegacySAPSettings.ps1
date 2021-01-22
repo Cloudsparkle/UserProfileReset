@@ -61,11 +61,11 @@ while ($true)
     $BackupExists =Test-Path -Path $Backuppath
     $LegacyExists =Test-Path -Path $LegacyPath
 
-    if ($BackupExists -eq $true)
+    if ($BackupExists)
     {
-      Write-host "Backup settings exist..."
+      Write-host "Settings backup exists..."
 
-      if ($LegacyExists -eq $true)
+      if ($LegacyExists)
       {
         Write-host "User has accessed the Legacy application already."
         Write-Host "Copying files..."
