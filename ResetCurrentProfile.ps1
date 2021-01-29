@@ -20,6 +20,7 @@
 #Variables to be customized
 $CurrentADGroup = "EMEA_Current-ResetCTXProfile"
 $CurrentSAPRestoreGroup = "EMEA_Current-RestoreSAPSettings"
+$CurrentQVRestoreGroup = "EMEA_Current-RestoreQVSettings"
 $CurrentResetRunningGroup = "EMEA_Current-ResetCTXProfileRunning"
 
 $CurrentProfileShare = "\\nitctxfil1vp.nittoeurope.com\profiles$\"
@@ -71,9 +72,10 @@ while ($true)
     }
 
     $CurrentProfilePath = $CurrentProfileShare + $CurrentResetUser.samaccountname + ".nittoeurope"
+    $CurrentProfileRenameTo = $CurrentProfileShare + $CurrentResetUser.samaccountname + $suffix
     $CurrentSAPPath = $CurrentProfilePath + $SAPNWBCSettingsPath
     $CurrentQVPath = $CurrentProfilePath + $QVSettingsPath
-    $CurrentProfileResetLog = $CurrentProfileShare + "0. ResetLog\"+($CurrentResetUser.SamAccountName +".nittoeurope"+ $suffix)
+    $CurrentProfileResetLog = $CurrentProfileShare + "0. ResetLog\"+($CurrentResetUser.SamAccountName + $suffix)
     $Restoreneeded = $False
 
     $CurrentProfileExist = test-path -Path $currentprofilepath
@@ -105,7 +107,7 @@ while ($true)
             Add-ADGroupMember -Identity $CurrentResetRunningGroup -Members $Currentresetuser.samaccountname
         }
 
-        rename-item $CurrentProfilePath ($CurrentProfilePath+$suffix)
+        rename-item $CurrentProfilePath ($CurrentProfileRenameTo)
         Write-Host "Profile reset complete. Removing user from Current Profile Reset AD Group" -ForegroundColor Green
         
 

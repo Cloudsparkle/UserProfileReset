@@ -45,7 +45,7 @@ while ($true)
     Write-Host "Processing " $SAPUser.name -ForegroundColor Yellow
 
     $Currentsession = ""
-    $Currentsession = Get-XASession | select Accountname | where {$_.Accountname -like ("*"+$SAPUser.SamAccountName)}
+    $Currentsession = Get-BrokerSession -AdminAddress $ctxddc -UserSID $SAPUser.SID
 
     if ($Currentsession -ne $null)
     {
@@ -99,9 +99,9 @@ while ($true)
 
   Write-Host "Waiting for next run..."
   clear-variable -name SAPUsers
-  "Memory used before collection: $([System.GC]::GetTotalMemory($false))"
+  write-host "Memory used before collection: $([System.GC]::GetTotalMemory($false))"
   [System.GC]::Collect()
   Sleep 15
-  "Memory used after full collection: $([System.GC]::GetTotalMemory($true))"
+  write-host "Memory used after full collection: $([System.GC]::GetTotalMemory($true))"
   Sleep 15
 }

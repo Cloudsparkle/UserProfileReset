@@ -32,7 +32,7 @@ $CurrentQVRestoreGroupDone = "EMEA_Current-RestoreQVSettingsDone"
 
 $CurrentProfileShare = "\\nitctxfil1vp.nittoeurope.com\profiles$\"
 $CurrentResetLogPath = $CurrentProfileShare + "0. Resetlog\"
-$QVINIPath = "\UPM_Profile\AppData\Roaming\QlikTech\QlikView\settings.ini"
+$QVINIPath = "\UPM_Profile\AppData\Roaming\Microsoft\AppV\Client\VFS\AC588FED-CFBD-406F-ABF2-03FB16563EF2\AppData\Qliktech\QlikView\settings.ini"
 $QVINI = "settings.ini"
 $QVSettingsPath = "\UPM_Profile\AppData\Roaming\Microsoft\AppV\Client\VFS\AC588FED-CFBD-406F-ABF2-03FB16563EF2\AppData\QlikTech\QlikView\"
 
@@ -44,7 +44,7 @@ while ($true)
     Write-Host "Processing " $QVUser.name -ForegroundColor Yellow
 
     $Currentsession = ""
-    $Currentsession = Get-XASession | select Accountname | where {$_.Accountname -like ("*"+$QVUser.SamAccountName)}
+    $Currentsession = Get-BrokerSession -AdminAddress $ctxddc -UserSID $QVUser.SID
 
     if ($Currentsession -ne $null)
     {
