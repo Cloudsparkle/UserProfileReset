@@ -129,7 +129,7 @@ Function Check-IniPath
         [ValidateScript({
             if( -Not ($_ -match '\\$') ){
                 [System.Windows.MessageBox]::Show("Path "+ $_ + " must end with \","Error in ini-file","OK","Error")
-                [Environment]::Exit(0)
+                [Environment]::Exit(1)
                 
             }
             if( -Not ($_ -match '^\\\\') ){
