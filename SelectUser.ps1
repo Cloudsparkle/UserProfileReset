@@ -202,8 +202,8 @@ if ($SelectedUser -eq $null)
     exit 1
   }
 
-$LegacyProfilePath = $LegacyProfileShare + "\" + $SelectedUser.samaccountname
-$CurrentProfilePath = $CurrentProfileShare + "\" + $SelectedUser.samaccountname + ".nittoeurope"
+$LegacyProfilePath = $LegacyProfileShare + $SelectedUser.samaccountname
+$CurrentProfilePath = $CurrentProfileShare + $SelectedUser.samaccountname + ".nittoeurope"
 
 $LegacyExists =Test-Path -Path $LegacyProfilePath
 $CurrentExists =Test-Path -Path $CurrentProfilePath
