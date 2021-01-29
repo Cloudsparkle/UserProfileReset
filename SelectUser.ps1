@@ -121,6 +121,30 @@ Function Get-IniContent
         {Write-Verbose "$($MyInvocation.MyCommand.Name):: Function ended"}
 }
 
+Function Check-IniPath
+{
+   
+[CmdletBinding()] 
+   param(
+        [ValidateScript({
+            if( -Not ($_ -match '\\$') ){
+                [System.Windows.MessageBox]::Show("Path "+ $_ + " must end with \","Error in ini-file","OK","Error")
+                [Environment]::Exit(0)
+                
+            }
+            if( -Not ($_ -match '^\\\\') ){
+                throw "Path must start with \\"
+            }
+            return $true
+        })]
+        [String]
+        $Path
+        )  
+    Process 
+        {    
+        }
+}
+
 $currentDir = [System.AppDomain]::CurrentDomain.BaseDirectory.TrimEnd('\')
 if ($currentDir -eq $PSHOME.TrimEnd('\'))
 	{
@@ -154,6 +178,10 @@ If ($IniFileExists -eq $true)
         [System.Windows.MessageBox]::Show("Legacy profile share not found in config.ini.","Error","OK","Error")
         exit 1
       }
+    Else
+    {
+        $CheckIniPath = Check-IniPath $LegacyProfileShare
+    }      
     
     $CurrentProfileShare = $IniFile["SHARE"]["CurrentProfileShare"]
     if ($CurrentProfileShare -eq $null)
