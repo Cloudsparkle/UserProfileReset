@@ -20,15 +20,162 @@
   None
 #>
 
+# Make sure we can display the fancy stuff
+Add-Type -AssemblyName PresentationFramework
+
+#Function to read config.ini
+Function Get-IniContent
+{
+    <#
+    .Synopsis
+        Gets the content of an INI file
+    .Description
+        Gets the content of an INI file and returns it as a hashtable
+    .Notes
+        Author        : Oliver Lipkau <oliver@lipkau.net>
+        Blog        : http://oliver.lipkau.net/blog/
+        Source        : https://github.com/lipkau/PsIni
+                      http://gallery.technet.microsoft.com/scriptcenter/ea40c1ef-c856-434b-b8fb-ebd7a76e8d91
+        Version        : 1.0 - 2010/03/12 - Initial release
+                      1.1 - 2014/12/11 - Typo (Thx SLDR)
+                                         Typo (Thx Dave Stiff)
+        #Requires -Version 2.0
+    .Inputs
+        System.String
+    .Outputs
+        System.Collections.Hashtable
+    .Parameter FilePath
+        Specifies the path to the input file.
+    .Example
+        $FileContent = Get-IniContent "C:\myinifile.ini"
+        -----------
+        Description
+        Saves the content of the c:\myinifile.ini in a hashtable called $FileContent
+    .Example
+        $inifilepath | $FileContent = Get-IniContent
+        -----------
+        Description
+        Gets the content of the ini file passed through the pipe into a hashtable called $FileContent
+    .Example
+        C:\PS>$FileContent = Get-IniContent "c:\settings.ini"
+        C:\PS>$FileContent["Section"]["Key"]
+        -----------
+        Description
+        Returns the key "Key" of the section "Section" from the C:\settings.ini file
+    .Link
+        Out-IniFile
+    #>
+
+    [CmdletBinding()]
+    Param(
+        [ValidateNotNullOrEmpty()]
+        [ValidateScript({(Test-Path $_) -and ((Get-Item $_).Extension -eq ".ini")})]
+        [Parameter(ValueFromPipeline=$True,Mandatory=$True)]
+        [string]$FilePath
+    )
+
+    Begin
+        {Write-Verbose "$($MyInvocation.MyCommand.Name):: Function started"}
+
+    Process
+    {
+        Write-Verbose "$($MyInvocation.MyCommand.Name):: Processing file: $Filepath"
+
+        $ini = @{}
+        switch -regex -file $FilePath
+        {
+            "^\[(.+)\]$" # Section
+            {
+                $section = $matches[1]
+                $ini[$section] = @{}
+                $CommentCount = 0
+            }
+            "^(;.*)$" # Comment
+            {
+                if (!($section))
+                {
+                    $section = "No-Section"
+                    $ini[$section] = @{}
+                }
+                $value = $matches[1]
+                $CommentCount = $CommentCount + 1
+                $name = "Comment" + $CommentCount
+                $ini[$section][$name] = $value
+            }
+            "(.+?)\s*=\s*(.*)" # Key
+            {
+                if (!($section))
+                {
+                    $section = "No-Section"
+                    $ini[$section] = @{}
+                }
+                $name,$value = $matches[1..2]
+                $ini[$section][$name] = $value
+            }
+        }
+        Write-Verbose "$($MyInvocation.MyCommand.Name):: Finished Processing file: $FilePath"
+        Return $ini
+    }
+
+    End
+        {Write-Verbose "$($MyInvocation.MyCommand.Name):: Function ended"}
+}
+
+$currentDir = [System.AppDomain]::CurrentDomain.BaseDirectory.TrimEnd('\')
+if ($currentDir -eq $PSHOME.TrimEnd('\'))
+	{
+		$currentDir = $PSScriptRoot
+	}
+
+#Read inifile
+$IniFilePath = $currentDir + "\config.ini"
+$IniFileExists = Test-Path $IniFilePath
+If ($IniFileExists -eq $true)
+{
+    $IniFile = Get-IniContent $IniFilePath
+
+    $LegacyADGroup = $IniFile["AD"]["LegacyADGroup"]
+    if ($LegacyADGroup -eq $null)
+      {
+        [System.Windows.MessageBox]::Show("Legacy AD Group not found in config.ini.","Error","OK","Error")
+        exit 1
+      }
+
+    $CurrentADGroup = $IniFile["AD"]["CurrentADGroup"]
+    if ($CurrentADGroup -eq $null)
+      {
+        [System.Windows.MessageBox]::Show("Current AD Group not found in config.ini.","Error","OK","Error")
+        exit 1
+      }
+
+    $LegacyProfileShare = $IniFile["SHARE"]["LegacyProfileShare"]
+    if ($LegacyProfileShare -eq $null)
+      {
+        [System.Windows.MessageBox]::Show("Legacy profile share not found in config.ini.","Error","OK","Error")
+        exit 1
+      }
+    
+    $CurrentProfileShare = $IniFile["SHARE"]["CurrentProfileShare"]
+    if ($CurrentProfileShare -eq $null)
+      {
+        [System.Windows.MessageBox]::Show("Current profile share not found in config.ini.","Error","OK","Error")
+        exit 1
+      }
+
+
+}   
+Else
+{
+    [System.Windows.MessageBox]::Show("Config.ini not found.","Error","OK","Error")
+    exit 1
+}
+
 #Initialize variables
 $SelectedDomain = ""
-$LegacyProfileShare = "\\nittoeurope.com\NE\Profiles"
-$CurrentProfileShare = "\\nitctxfil1vp.nittoeurope.com\profiles$"
-$LegacyADGroup = "EMEA_Legacy-ResetCTXProfile"
-$CurrentADGroup = "EMEA_Current-ResetCTXProfile"
 $ResetNeeded = $false
 
-Add-Type -AssemblyName PresentationFramework
+#$LegacyProfileShare = "\\nittoeurope.com\NE\Profiles\"
+#$CurrentProfileShare = "\\nitctxfil1vp.nittoeurope.com\profiles$\"
 
 #Get the AD DomainName
 $ADForestInfo = Get-ADForest
@@ -37,7 +184,7 @@ $SelectedDomain = $ADForestInfo.Domains | Out-GridView -Title "Select AD Domain"
 #Check for a valid DomainName
 if ($SelectedDomain -eq $null)
   {
-    [System.Windows.MessageBox]::Show("AD Domain not selected","Error","OK","Error")
+    [System.Windows.MessageBox]::Show("AD Domain not selected.","Error","OK","Error")
     exit
   }
 
@@ -51,7 +198,7 @@ $SelectedUser = $ADUserList | Out-GridView -Title "UserProfileReset: Select the 
 #Basic checks for selecte groups
 if ($SelectedUser -eq $null)
   {
-    [System.Windows.MessageBox]::Show("Source group not selected","Error","OK","Error")
+    [System.Windows.MessageBox]::Show("User not selected.","Error","OK","Error")
     exit 1
   }
 
