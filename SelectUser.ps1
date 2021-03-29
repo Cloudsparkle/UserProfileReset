@@ -121,30 +121,6 @@ Function Get-IniContent
         {Write-Verbose "$($MyInvocation.MyCommand.Name):: Function ended"}
 }
 
-Function Check-IniPath
-{
-   
-[CmdletBinding()] 
-   param(
-        [ValidateScript({
-            if( -Not ($_ -match '\\$') ){
-                [System.Windows.MessageBox]::Show("Path "+ $_ + " must end with \","Error in ini-file","OK","Error")
-                [Environment]::Exit(1)
-                
-            }
-            if( -Not ($_ -match '^\\\\') ){
-                throw "Path must start with \\"
-            }
-            return $true
-        })]
-        [String]
-        $Path
-        )  
-    Process 
-        {    
-        }
-}
-
 $currentDir = [System.AppDomain]::CurrentDomain.BaseDirectory.TrimEnd('\')
 if ($currentDir -eq $PSHOME.TrimEnd('\'))
 	{
@@ -180,7 +156,14 @@ If ($IniFileExists -eq $true)
       }
     Else
     {
-        $CheckIniPath = Check-IniPath $LegacyProfileShare
+        $LegacyProfileShare.TrimEnd('\')
+        $LegacyProfileShare += '\'
+        $LegacyShareExists =Test-Path -Path $LegacyProfileShare
+        if ($LegacyShareExists -eq $false)
+        {
+            [System.Windows.MessageBox]::Show("Legacy profile share not reachable. Please check config.ini.","Error","OK","Error")
+            exit 1
+        }
     }      
     
     $CurrentProfileShare = $IniFile["SHARE"]["CurrentProfileShare"]
@@ -189,7 +172,20 @@ If ($IniFileExists -eq $true)
         [System.Windows.MessageBox]::Show("Current profile share not found in config.ini.","Error","OK","Error")
         exit 1
       }
+    Else
+        {
+        $CurrentProfileShare.TrimEnd('\')
+        $CurrentProfileShare += '\'
+        $CurrentShareExists =Test-Path -Path $CurrentProfileShare
+        if ($CurrentShareExists -eq $false)
+        {
+            [System.Windows.MessageBox]::Show("Current profile share not reachable. Please check config.ini.","Error","OK","Error")
+            exit 1
+        }
+        }
 
+      $CurrentProfileSuffix = $IniFile["GENERAL"]["CurrentProfileSuffix"]
+    
 
 }   
 Else
@@ -200,10 +196,8 @@ Else
 
 #Initialize variables
 $SelectedDomain = ""
-$ResetNeeded = $false
-
-#$LegacyProfileShare = "\\nittoeurope.com\NE\Profiles\"
-#$CurrentProfileShare = "\\nitctxfil1vp.nittoeurope.com\profiles$\"
+$ResetPossible = $false
+$resetRequested = $false
 
 #Get the AD DomainName
 $ADForestInfo = Get-ADForest
@@ -219,11 +213,11 @@ if ($SelectedDomain -eq $null)
 #Find the right AD Domain Controller
 $dc = Get-ADDomainController -DomainName $SelectedDomain -Discover -NextClosestSite
 
-#Get all users from selected domain and select source and destination groups
+#Get all users from selected domain and select the user for which to reset the profile
 $ADUserList = Get-ADUser -filter * -Server $SelectedDomain | sort name | select Name, samaccountname
 $SelectedUser = $ADUserList | Out-GridView -Title "UserProfileReset: Select the user to reset" -OutputMode Single
 
-#Basic checks for selecte groups
+#Basic checks for selected user
 if ($SelectedUser -eq $null)
   {
     [System.Windows.MessageBox]::Show("User not selected.","Error","OK","Error")
@@ -231,29 +225,39 @@ if ($SelectedUser -eq $null)
   }
 
 $LegacyProfilePath = $LegacyProfileShare + $SelectedUser.samaccountname
-$CurrentProfilePath = $CurrentProfileShare + $SelectedUser.samaccountname + ".nittoeurope"
+$CurrentProfilePath = $CurrentProfileShare + $SelectedUser.samaccountname + $CurrentProfileSuffix
 
 $LegacyExists =Test-Path -Path $LegacyProfilePath
 $CurrentExists =Test-Path -Path $CurrentProfilePath
 
 if ($LegacyExists)
     {
-    #Ask for
+    #Ask for a reset of the Legacy user profile
     $ResetLegacy = [System.Windows.MessageBox]::Show('Do you want to reset the profile on Legacy Citrix Servers?','Legacy Profile Exists','YesNo','Question')
+    $ResetPossible = $true
     }
 
 if ($CurrentExists)
     {
-    #Ask for
+    #Ask for a reset of the current user profile
     $ResetCurrent = [System.Windows.MessageBox]::Show('Do you want to reset the profile on Current Citrix Servers?','Current Profile Exists','YesNo','Question')
+    $ResetPossible = $true
     }
+
+if ($ResetPossible -eq $false)
+{
+    $message = "User " + $selectedUser.name + " does not have a Citrix profile to reset."
+    [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
+    exit 1
+} 
+
 
 if ($ResetLegacy -eq "Yes")
     {
     Add-ADGroupMember -Identity $LegacyADGroup -Members $SelectedUser.samaccountname
     $message = "User " + $selectedUser.name + " has been selected for Legacy Citrix Profile reset"
     [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
-    $resetneeded = $true
+    $ResetRequested = $true
     }
 
 if ($ResetCurrent -eq "Yes")
@@ -261,11 +265,11 @@ if ($ResetCurrent -eq "Yes")
     Add-ADGroupMember -Identity $CurrentADGroup -Members $SelectedUser.samaccountname
     $message = "User " + $selectedUser.name + " has been selected for Current Citrix Profile reset"
     [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
-    $resetneeded = $true
+    $ResetRequested = $true
     }
 
-if ($ResetNeeded -eq $false)
+if ($ResetRequested -eq $false)
 {
-    $message = "User " + $selectedUser.name + " does not have a Citrix profile to reset."
+    $message = "A Citrix profile reset for user " + $selectedUser.name + " was not requested."
     [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
 }     
