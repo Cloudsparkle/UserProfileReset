@@ -1,21 +1,18 @@
 ﻿#requires -modules ActiveDirectory
 <#
 .SYNOPSIS
-  Copy AD group members from one AD group to another AD group in the same domain
+  Select the user that needs a Citrix userprofile reset.
 .DESCRIPTION
-  This script provides a GUI to quickly copy AD group members to another existing group in the same domain. Multi-domain forests are supported, the script will query for the AD domain.
-.PARAMETER <Parameter_Name>
-    None
+  This script is part of a set to reset and backup/restore a Citrix userprofile. This is the part to select the user for whom the profile to reset
 .INPUTS
-  AD Domain, Source AD group, Destination AD Group
+  User from AD Group
 .OUTPUTS
   None
 .NOTES
-  Version:        1.1
+  Version:        1.0
   Author:         Bart Jacobs - @Cloudsparkle
-  Creation Date:  09/03/2020
-  Purpose/Change: Copy AD Group members to another group
-
+  Creation Date:  19/01/2021
+  Purpose/Change: Citrix profile reset user selector
 .EXAMPLE
   None
 #>
@@ -23,7 +20,7 @@
 # Make sure we can display the fancy stuff
 Add-Type -AssemblyName PresentationFramework
 
-#Function to read config.ini
+# Function to read config.ini
 Function Get-IniContent
 {
     <#
@@ -121,155 +118,242 @@ Function Get-IniContent
         {Write-Verbose "$($MyInvocation.MyCommand.Name):: Function ended"}
 }
 
+# Get the current running directory
 $currentDir = [System.AppDomain]::CurrentDomain.BaseDirectory.TrimEnd('\')
 if ($currentDir -eq $PSHOME.TrimEnd('\'))
-	{
-		$currentDir = $PSScriptRoot
-	}
+{
+  $currentDir = $PSScriptRoot
+}
 
-#Read inifile
+# Read config.ini
 $IniFilePath = $currentDir + "\config.ini"
 $IniFileExists = Test-Path $IniFilePath
 If ($IniFileExists -eq $true)
 {
-    $IniFile = Get-IniContent $IniFilePath
+  $IniFile = Get-IniContent $IniFilePath
 
-    $LegacyADGroup = $IniFile["AD"]["LegacyADGroup"]
-    if ($LegacyADGroup -eq $null)
-      {
-        [System.Windows.MessageBox]::Show("Legacy AD Group not found in config.ini.","Error","OK","Error")
-        exit 1
-      }
-
-    $CurrentADGroup = $IniFile["AD"]["CurrentADGroup"]
-    if ($CurrentADGroup -eq $null)
-      {
-        [System.Windows.MessageBox]::Show("Current AD Group not found in config.ini.","Error","OK","Error")
-        exit 1
-      }
-
-    $LegacyProfileShare = $IniFile["SHARE"]["LegacyProfileShare"]
-    if ($LegacyProfileShare -eq $null)
-      {
-        [System.Windows.MessageBox]::Show("Legacy profile share not found in config.ini.","Error","OK","Error")
-        exit 1
-      }
-    Else
+  # Users that need to have their profile reset on the legacy Citrix will be added to this AD group for batch processing in another script
+  $LegacyADGroup = $IniFile["AD"]["LegacyADGroup"]
+  if ($LegacyADGroup -eq $null)
+  {
+    $msgBoxInput = [System.Windows.MessageBox]::Show("Legacy AD Group not found in config.ini.","Error","OK","Error")
+    switch  ($msgBoxInput)
     {
-        $LegacyProfileShare.TrimEnd('\')
-        $LegacyProfileShare += '\'
-        $LegacyShareExists =Test-Path -Path $LegacyProfileShare
-        if ($LegacyShareExists -eq $false)
-        {
-            [System.Windows.MessageBox]::Show("Legacy profile share not reachable. Please check config.ini.","Error","OK","Error")
-            exit 1
-        }
-    }      
-    
-    $CurrentProfileShare = $IniFile["SHARE"]["CurrentProfileShare"]
-    if ($CurrentProfileShare -eq $null)
+      "OK"
       {
-        [System.Windows.MessageBox]::Show("Current profile share not found in config.ini.","Error","OK","Error")
-        exit 1
+        Exit 1
       }
-    Else
-        {
-        $CurrentProfileShare.TrimEnd('\')
-        $CurrentProfileShare += '\'
-        $CurrentShareExists =Test-Path -Path $CurrentProfileShare
-        if ($CurrentShareExists -eq $false)
-        {
-            [System.Windows.MessageBox]::Show("Current profile share not reachable. Please check config.ini.","Error","OK","Error")
-            exit 1
-        }
-        }
+    }
+  }
 
-      $CurrentProfileSuffix = $IniFile["GENERAL"]["CurrentProfileSuffix"]
-    
+  # Users that need to have their profile reset on the current Citrix will be added to this AD group for batch processing in another script
+  $CurrentADGroup = $IniFile["AD"]["CurrentADGroup"]
+  if ($CurrentADGroup -eq $null)
+  {
+    $msgBoxInput = [System.Windows.MessageBox]::Show("Current AD Group not found in config.ini.","Error","OK","Error")
+    switch  ($msgBoxInput)
+    {
+      "OK"
+      {
+        Exit 1
+      }
+    }
+  }
 
-}   
+  # Getting the Citrix UPM Profile share for the Legacy environment
+  $LegacyProfileShare = $IniFile["SHARE"]["LegacyProfileShare"]
+  if ($LegacyProfileShare -eq $null)
+  {
+    $msgBoxInput = [System.Windows.MessageBox]::Show("Legacy profile share not found in config.ini.","Error","OK","Error")
+    switch  ($msgBoxInput)
+    {
+      "OK"
+      {
+        Exit 1
+      }
+    }
+  }
+  Else
+  {
+    # Making sure the path has a trailing \, exists and is accessible
+    $LegacyProfileShare.TrimEnd('\') | out-null
+    $LegacyProfileShare += '\' | out-null
+    $LegacyShareExists =Test-Path -Path $LegacyProfileShare
+    if ($LegacyShareExists -eq $false)
+    {
+      $msgBoxInput = [System.Windows.MessageBox]::Show("Legacy profile share not reachable. Please check config.ini.","Error","OK","Error")
+      switch  ($msgBoxInput)
+      {
+        "OK"
+        {
+          Exit 1
+        }
+      }
+    }
+  }
+
+  # Getting the Citrix UPM Profile share for the current environment
+  $CurrentProfileShare = $IniFile["SHARE"]["CurrentProfileShare"]
+  if ($CurrentProfileShare -eq $null)
+  {
+    $msgBoxInput = [System.Windows.MessageBox]::Show("Current profile share not found in config.ini.","Error","OK","Error")
+    switch  ($msgBoxInput)
+    {
+      "OK"
+      {
+        Exit 1
+      }
+    }
+  }
+  Else
+  {
+    # Making sure the path has a trailing \, exists and is accessible
+    $CurrentProfileShare.TrimEnd('\') | out-null
+    $CurrentProfileShare += '\' | out-null
+    $CurrentShareExists = Test-Path -Path $CurrentProfileShare
+    if ($CurrentShareExists -eq $false)
+    {
+      $msgBoxInput = [System.Windows.MessageBox]::Show("Current profile share not reachable. Please check config.ini.","Error","OK","Error")
+      switch  ($msgBoxInput)
+      {
+        "OK"
+        {
+          Exit 1
+        }
+      }
+    }
+  }
+
+  # When the user forlders in the profile share have a suffix, that's read here
+  $LegacyProfileSuffix = $IniFile["GENERAL"]["LegacyProfileSuffix"]
+  $CurrentProfileSuffix = $IniFile["GENERAL"]["CurrentProfileSuffix"]
+}
 Else
 {
-    [System.Windows.MessageBox]::Show("Config.ini not found.","Error","OK","Error")
-    exit 1
+  $msgBoxInput = [System.Windows.MessageBox]::Show("Config.ini not found.","Error","OK","Error")
+  switch  ($msgBoxInput)
+  {
+    "OK"
+    {
+      Exit 1
+    }
+  }
 }
 
-#Initialize variables
+# Initialize variables
 $SelectedDomain = ""
 $ResetPossible = $false
 $resetRequested = $false
 
-#Get the AD DomainName
+# Get the AD DomainName
 $ADForestInfo = Get-ADForest
 $SelectedDomain = $ADForestInfo.Domains | Out-GridView -Title "Select AD Domain" -OutputMode Single
 
-#Check for a valid DomainName
+# Check for a valid DomainName
 if ($SelectedDomain -eq $null)
+{
+  $msgBoxInput = [System.Windows.MessageBox]::Show("AD Domain not selected.","Error","OK","Error")
+  switch  ($msgBoxInput)
   {
-    [System.Windows.MessageBox]::Show("AD Domain not selected.","Error","OK","Error")
-    exit
+    "OK"
+    {
+      Exit 1
+    }
   }
+}
 
-#Find the right AD Domain Controller
+# Find the right AD Domain Controller
 $dc = Get-ADDomainController -DomainName $SelectedDomain -Discover -NextClosestSite
 
-#Get all users from selected domain and select the user for which to reset the profile
+# Get all users from selected domain and select the user for which to reset the profile
 $ADUserList = Get-ADUser -filter * -Server $SelectedDomain | sort name | select Name, samaccountname
 $SelectedUser = $ADUserList | Out-GridView -Title "UserProfileReset: Select the user to reset" -OutputMode Single
 
 #Basic checks for selected user
 if ($SelectedUser -eq $null)
+{
+  $msgBoxInput = [System.Windows.MessageBox]::Show("User not selected.","Error","OK","Error")
+  switch  ($msgBoxInput)
   {
-    [System.Windows.MessageBox]::Show("User not selected.","Error","OK","Error")
-    exit 1
+    "OK"
+    {
+      Exit 1
+    }
   }
+}
 
-$LegacyProfilePath = $LegacyProfileShare + $SelectedUser.samaccountname
+$LegacyProfilePath = $LegacyProfileShare + $SelectedUser.samaccountname + $LegacyProfileSuffix
 $CurrentProfilePath = $CurrentProfileShare + $SelectedUser.samaccountname + $CurrentProfileSuffix
 
 $LegacyExists =Test-Path -Path $LegacyProfilePath
 $CurrentExists =Test-Path -Path $CurrentProfilePath
 
 if ($LegacyExists)
-    {
-    #Ask for a reset of the Legacy user profile
-    $ResetLegacy = [System.Windows.MessageBox]::Show('Do you want to reset the profile on Legacy Citrix Servers?','Legacy Profile Exists','YesNo','Question')
-    $ResetPossible = $true
-    }
+{
+  # Ask for a reset of the Legacy user profile
+  $ResetLegacy = [System.Windows.MessageBox]::Show('Do you want to reset the profile on Legacy Citrix Servers?','Legacy Profile Exists','YesNo','Question')
+  $ResetPossible = $true
+}
 
 if ($CurrentExists)
-    {
-    #Ask for a reset of the current user profile
-    $ResetCurrent = [System.Windows.MessageBox]::Show('Do you want to reset the profile on Current Citrix Servers?','Current Profile Exists','YesNo','Question')
-    $ResetPossible = $true
-    }
+{
+  # Ask for a reset of the current user profile
+  $ResetCurrent = [System.Windows.MessageBox]::Show('Do you want to reset the profile on Current Citrix Servers?','Current Profile Exists','YesNo','Question')
+  $ResetPossible = $true
+}
 
 if ($ResetPossible -eq $false)
 {
-    $message = "User " + $selectedUser.name + " does not have a Citrix profile to reset."
-    [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
-    exit 1
-} 
-
+  $message = "User " + $selectedUser.name + " does not have a Citrix profile to reset."
+  $msgBoxInput = [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
+  switch  ($msgBoxInput)
+  {
+    "OK"
+    {
+      Exit 1
+    }
+  }
+}
 
 if ($ResetLegacy -eq "Yes")
+{
+  Add-ADGroupMember -Identity $LegacyADGroup -Members $SelectedUser.samaccountname
+  $message = "User " + $selectedUser.name + " has been selected for Legacy Citrix Profile reset"
+  $msgBoxInput = [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
+  switch  ($msgBoxInput)
+  {
+    "OK"
     {
-    Add-ADGroupMember -Identity $LegacyADGroup -Members $SelectedUser.samaccountname
-    $message = "User " + $selectedUser.name + " has been selected for Legacy Citrix Profile reset"
-    [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
-    $ResetRequested = $true
+      Exit 0
     }
+  }
+  $ResetRequested = $true
+}
 
 if ($ResetCurrent -eq "Yes")
+{
+  Add-ADGroupMember -Identity $CurrentADGroup -Members $SelectedUser.samaccountname
+  $message = "User " + $selectedUser.name + " has been selected for Current Citrix Profile reset"
+  $msgBoxInput = [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
+  switch  ($msgBoxInput)
+  {
+    "OK"
     {
-    Add-ADGroupMember -Identity $CurrentADGroup -Members $SelectedUser.samaccountname
-    $message = "User " + $selectedUser.name + " has been selected for Current Citrix Profile reset"
-    [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
-    $ResetRequested = $true
+      Exit 0
     }
+  }
+  $ResetRequested = $true
+}
 
 if ($ResetRequested -eq $false)
 {
-    $message = "A Citrix profile reset for user " + $selectedUser.name + " was not requested."
-    [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
-}     
+  $message = "A Citrix profile reset for user " + $selectedUser.name + " was not requested."
+  $msgBoxInput = [System.Windows.MessageBox]::Show($message,"Finished","OK","Asterisk")
+  switch  ($msgBoxInput)
+  {
+    "OK"
+    {
+      Exit 0
+    }
+  }
+}
