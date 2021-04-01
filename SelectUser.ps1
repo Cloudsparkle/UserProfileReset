@@ -177,7 +177,7 @@ If ($IniFileExists -eq $true)
   {
     # Making sure the path has a trailing \, exists and is accessible
     $LegacyProfileShare.TrimEnd('\') | out-null
-    $LegacyProfileShare += '\' | out-null
+    $LegacyProfileShare += '\' 
     $LegacyShareExists =Test-Path -Path $LegacyProfileShare
     if ($LegacyShareExists -eq $false)
     {
@@ -209,7 +209,7 @@ If ($IniFileExists -eq $true)
   {
     # Making sure the path has a trailing \, exists and is accessible
     $CurrentProfileShare.TrimEnd('\') | out-null
-    $CurrentProfileShare += '\' | out-null
+    $CurrentProfileShare += '\' 
     $CurrentShareExists = Test-Path -Path $CurrentProfileShare
     if ($CurrentShareExists -eq $false)
     {
