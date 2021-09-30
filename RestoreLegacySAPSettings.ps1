@@ -313,11 +313,10 @@ while ($true)
 
   Write-Host "Waiting for next run..."
 
-  clear-variable -name SAPUsers
-  "Memory used before collection: $([System.GC]::GetTotalMemory($false))"
+  #"Memory used before collection: $([System.GC]::GetTotalMemory($false))"
   [System.GC]::Collect()
   Sleep 15
-  "Memory used after full collection: $([System.GC]::GetTotalMemory($true))"
+  #"Memory used after full collection: $([System.GC]::GetTotalMemory($true))"
   Sleep 15
 
 }
