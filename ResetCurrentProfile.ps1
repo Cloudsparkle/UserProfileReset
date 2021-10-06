@@ -271,7 +271,6 @@ $QVSettingsPath = $IniFile["SHARE"]["QVSettingsPath"]
     $QVSettingsPath += '\'
   }
 
-
   # When the user forlders in the profile share have a suffix, that's read here
   $CurrentProfileSuffix = $IniFile["GENERAL"]["CurrentProfileSuffix"]
 }
