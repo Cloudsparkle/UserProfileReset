@@ -329,8 +329,8 @@ while ($true)
 
     $CurrentProfilePath = $CurrentProfileShare + $CurrentResetUser.samaccountname + $CurrentProfileSuffix
     $CurrentProfileRenameTo = $CurrentProfileShare + $CurrentResetUser.samaccountname + $suffix
-    $CurrentSAPPath = $CurrentProfilePath + $SAPNWBCSettingsPath
-    $CurrentQVPath = $CurrentProfilePath + $QVSettingsPath
+    $CurrentSAPPath = $CurrentProfilePath + "\" + $SAPNWBCSettingsPath
+    $CurrentQVPath = $CurrentProfilePath + "\" + $QVSettingsPath
     $CurrentProfileResetLog = $CurrentResetLogPath + ($CurrentResetUser.SamAccountName + $suffix)
     $Restoreneeded = $False
 

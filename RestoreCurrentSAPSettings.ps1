@@ -283,8 +283,8 @@ while ($true)
 
     $RestoreLogID = Get-ChildItem $CurrentResetLogPath | select name | where {$_.name -like ($SAPUser.SamAccountName+"*")}
 
-    $Backuppath = $CurrentProfileShare + $RestoreLogID.Name + $SAPNWBCXMLPath
-    $CurrentPath = $CurrentProfileShare + $SAPUser.SamAccountName + ".nittoeurope" + $SAPNWBCSettingsPath
+    $Backuppath = $CurrentProfileShare + $RestoreLogID.Name + "\" + $SAPNWBCXMLPath
+    $CurrentPath = $CurrentProfileShare + $SAPUser.SamAccountName + $CurrentProfileSuffix + "\"  + $SAPNWBCSettingsPath
     $CurrentXMLFile1 = $Currentpath + $SAPBCFavorites
     $CurrentXMLFile2 = $Currentpath + $SAPNWBCFavorites
 

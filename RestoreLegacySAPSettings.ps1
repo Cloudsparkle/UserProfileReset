@@ -268,6 +268,7 @@ while ($true)
     }
 
     $RestoreLogID = Get-ChildItem $LegacyResetLogPath | select name | where {$_.name -like ($SAPUser.SamAccountName+"*")}
+
     $Backuppath = $LegacyProfileShare + $RestoreLogID.Name + "\" + $SAPNWBCXMLPath
     $LegacyPath = $LegacyProfileShare + $SAPUser.SamAccountName + "\" + $SAPNWBCSettingsPath
     $LegacyXMLFile1 = $Legacypath + $SAPBCFavorites
